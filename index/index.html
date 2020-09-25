@@ -154,22 +154,10 @@
         // function onCreateOfferError(pc, id, error) {
         //     console.log('createOffer: fail error ' + error);
         // }
-        //offer创建成功回调
-        function onCreateOfferSuccess(pc, id, offer) {
-            //设置本地setLocalDescription
-            pc.setLocalDescription(offer);
-            //发送offer消息
-            var message = {};
-            message.from = socketId;
-            message.to = id;
-            message.room = roomId;
-            message.sdp = offer.sdp;
-            socket.emit('offer', message);
-        }
         //created 房间
         socket.on('created', async function(data) {
                 console.log('created: ' + JSON.stringify(data));
-                // getEle('createAndJoinRoom').disabled = true;
+                getEle('createAndJoinRoom').disabled = true;
                 //设置socket id
                 socketId = data.id;
                 //设置room id
@@ -183,7 +171,15 @@
                     const offer = await pc.createOffer(
                         offerOptions
                     );
-                    onCreateOfferSuccess(pc, otherSocketId, offer);
+                    // onCreateOfferSuccess(pc, otherSocketId, offer);
+                    pc.setLocalDescription(offer);
+                    //发送offer消息
+                    var message = {};
+                    message.from = socketId;
+                    message.to = otherSocketId;
+                    message.room = roomId;
+                    message.sdp = offer.sdp;
+                    socket.emit('offer', message);
                 }
             })
             //joined [id,room]
@@ -192,18 +188,6 @@
             //构建Peer
             getOrCreateRtcConnect(data.from);
         });
-        //answer创建成功回调
-        function onCreateAnswerSuccess(pc, id, offer) {
-            //设置本地setLocalDescription
-            pc.setLocalDescription(offer);
-            //发送answer消息
-            var message = {};
-            message.from = socketId;
-            message.to = id;
-            message.room = roomId;
-            message.sdp = offer.sdp;
-            socket.emit('answer', message);
-        }
         //answer创建失败回调
         function onCreateAnswerError(pc, id, error) {
             console.log('createAnswer: fail error ' + error);
@@ -220,8 +204,18 @@
             //设置远端setRemoteDescription
             pc.setRemoteDescription(new RTCSessionDescription(rtcDescription));
             //answer创建
-            pc.createAnswer(offerOptions).then(offer => onCreateAnswerSuccess(pc, data.from, offer), error =>
-                onCreateAnswerError(pc, otherSocketId, error));
+            pc.createAnswer(offerOptions).then(offer => {
+                    pc.setLocalDescription(offer);
+                    //发送answer消息
+                    var message = {};
+                    message.from = socketId;
+                    message.to = data.from;
+                    message.room = roomId;
+                    message.sdp = offer.sdp;
+                    socket.emit('answer', message);
+
+                }, error =>
+                onCreateAnswerError(pc, otherSocketId, error))
         })
         socket.on('answer', function(data) {
                 var pc = getOrCreateRtcConnect(data.from);
